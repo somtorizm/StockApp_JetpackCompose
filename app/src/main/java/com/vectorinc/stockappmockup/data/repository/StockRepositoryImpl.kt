@@ -1,6 +1,9 @@
 package com.vectorinc.stockappmockup.data.repository
 
+import com.vectorinc.stockappmockup.data.csv.CSVPaser
+import com.vectorinc.stockappmockup.data.local.CompanyListingEntity
 import com.vectorinc.stockappmockup.data.local.StockDatabase
+import com.vectorinc.stockappmockup.data.mapper.toCompanyListingEntity
 import com.vectorinc.stockappmockup.data.mapper.toCompanyListings
 import com.vectorinc.stockappmockup.data.remote.StockApi
 import com.vectorinc.stockappmockup.domain.model.CompanyListing
@@ -16,7 +19,8 @@ import javax.inject.Singleton
 @Singleton
 class StockRepositoryImpl @Inject constructor(
     val api: StockApi,
-    val db: StockDatabase
+    val db: StockDatabase,
+    val companyListingPaser: CSVPaser<CompanyListing>
 ) : StockRepository {
     private val dao = db.dao
     override suspend fun getCompanyListings(
@@ -37,17 +41,33 @@ class StockRepositoryImpl @Inject constructor(
             }
             val remoteListings = try {
                 val response = api.getListings()
+                companyListingPaser.paser(response.byteStream())
+
 
             } catch (e: IOException) {
                 e.printStackTrace()
                 emit(Resource.Error("Couldn't load data"))
+                null
 
             } catch (e: HttpException) {
                 e.printStackTrace()
                 emit(Resource.Error("Couldn't load data"))
+                null
 
             }
+            remoteListings?.let {listings->
+                dao.clearCompanyListings()
+                dao.insertCompanyListings(
+                    listings.map {
+                        it.toCompanyListingEntity()
+                    }
+                )
+                emit(Resource.Success(
+                    data = dao.searchCompanyListings("").map { it.toCompanyListings() }
+                ))
+                emit(Resource.isLoading(false))
 
+            }
 
         }
     }
