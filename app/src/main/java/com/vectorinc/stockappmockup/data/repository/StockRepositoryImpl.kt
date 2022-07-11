@@ -18,9 +18,9 @@ import javax.inject.Singleton
 
 @Singleton
 class StockRepositoryImpl @Inject constructor(
-    val api: StockApi,
-    val db: StockDatabase,
-    val companyListingPaser: CSVPaser<CompanyListing>
+   private val api: StockApi,
+   private val db: StockDatabase,
+   private val companyListingPaser: CSVPaser<CompanyListing>
 ) : StockRepository {
     private val dao = db.dao
     override suspend fun getCompanyListings(
